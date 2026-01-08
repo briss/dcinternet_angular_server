@@ -41,7 +41,7 @@ const cuentas = [
 app.use(cors());
 app.use(express.json());
 
-app.listen(3000, 
+app.listen(3000,
     () => console.log("Servidor ejecutando en el puerto 3000"));
 
 
@@ -55,7 +55,7 @@ app.post('/login', (req, res) => {
 
     console.log('Usuario: ' + usuario + ", Password: " + password);
 
-    let existeUsuario = usuarios.find((u) => u.username === usuario && 
+    let existeUsuario = usuarios.find((u) => u.username === usuario &&
                 u.password === password);
     if (existeUsuario) {
         let token = jwt.sign({"user": usuario}, "llaveprivada");
@@ -73,12 +73,13 @@ app.post('/login', (req, res) => {
 app.get('/cuentas/:usuario', (req, res) => {
     let auth = req.headers['authorization'];
     if (!auth) {
-        res.json({
-            "error": "Usuario no autorizado"
-        });
+        res.status(401)
+            .json({
+                "error": "Usuario no autorizado"
+            });
     }
     let token = auth.split(" ")[1];
-    
+
     try {
         if (jwt.verify(token, "llaveprivada")) {
             let username = req.params.usuario;
