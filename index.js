@@ -7,6 +7,24 @@ const app = express();
 const tokenSecret = "My$ecr3t";
 const refreshTokenSecret = "MyR3fr3$hS3cret";
 
+const getToken = (username) =>
+    jwt.sign(
+        { "user": username },
+        tokenSecret,
+        {
+            expiresIn: '1m'
+        }
+    );
+
+const getRefreshToken = (username) =>
+    jwt.sign(
+        { "user": username },
+        refreshTokenSecret,
+        {
+            expiresIn: '1d'
+        }
+    );
+
 const usuarios = [
     {
         "username": "Briseida",
@@ -55,34 +73,22 @@ app.get('/', (req, res) => {
 });
 
 app.post('/login', (req, res) => {
-    let usuario = req.body.usuario;
+    console.log('> Login ------------------------------');
+    let username = req.body.usuario;
     let password = req.body.password;
 
-    console.log('Usuario: ' + usuario + ", Password: " + password);
+    console.log('Usuario: ' + username);
 
-    let usuarioEncontrado = usuarios.find((u) => u.username === usuario &&
+    let usuario = usuarios.find(u => u.username === username &&
                 u.password === password);
-    if (usuarioEncontrado) {
-        let token = jwt.sign(
-            {"user": usuario}, 
-            "llaveprivada",
-            {
-                expiresIn: '1m'
-            }
-        );
-
-        let refreshToken = jwt.sign(
-            {"user": usuario}, 
-            "nuevoToken",
-            {
-                expiresIn: '1d'
-            }
-        );
+    if (usuario) {
+        let token = getToken(username)
+        let refreshToken = getRefreshToken(username);
 
         res.json({
             "token": token,
             "refreshToken": refreshToken,
-            "rol": usuarioEncontrado.rol,
+            "rol": usuario.rol,
             "success": true
         });
     } else {
@@ -93,7 +99,7 @@ app.post('/login', (req, res) => {
 });
 
 app.post('/refresh', (req, res) => {
-    console.log('Refrescando...');
+    console.log('> Refresh ------------------------------');
     let auth = req.headers['authorization'];
     if (!auth) {
         res.status(401)
@@ -104,24 +110,13 @@ app.post('/refresh', (req, res) => {
     let refreshToken = auth.split(" ")[1];
 
     try {
-        if (jwt.verify(refreshToken, "nuevoToken")) {
-            let usuario = req.body.usuario;
+        if (jwt.verify(refreshToken, refreshTokenSecret)) {
+            let username = req.body.usuario;
 
-            let token = jwt.sign(
-                {"user": usuario}, 
-                "llaveprivada",
-                {
-                    expiresIn: '1m'
-                }
-            );
+            let token = getToken(username);
+            let refreshToken = getRefreshToken(username);
 
-            let refreshToken = jwt.sign(
-                {"user": usuario}, 
-                "nuevoToken",
-                {
-                    expiresIn: '1d'
-                }
-            );
+            let usuario = usuarios.find(u => u.username === username);
 
             res.json({
                 "token": token,
@@ -144,6 +139,7 @@ app.post('/refresh', (req, res) => {
 });
 
 app.get('/cuentas/:usuario', (req, res) => {
+    console.log('> Cuentas ------------------------------');
     let auth = req.headers['authorization'];
     if (!auth) {
         res.status(401)
@@ -154,11 +150,13 @@ app.get('/cuentas/:usuario', (req, res) => {
     let token = auth.split(" ")[1];
 
     try {
-        if (jwt.verify(token, "llaveprivada")) {
+        if (jwt.verify(token, tokenSecret)) {
             let username = req.params.usuario;
 
             let cuentasUsuario = cuentas.filter(c => c.username === username);
-            console.log(cuentasUsuario);
+
+            console.log("Cuentas del usuario " + username, cuentasUsuario);
+
             res.json(cuentasUsuario);
         } else {
             res.json({
