@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 
@@ -61,8 +62,12 @@ const cuentas = [
     }
 ];
 
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:4200',
+    credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 app.listen(3000,
     () => console.log("Servidor ejecutando en el puerto 3000"));
@@ -85,6 +90,20 @@ app.post('/login', (req, res) => {
         let token = getToken(username)
         let refreshToken = getRefreshToken(username);
 
+        res.cookie('jwtToken', token, {
+            httpOnly: true,
+            secure: false, // Para https debe ir en true
+            sameSite: 'strict', // 'none' nivel mínimo, 'strict' nivel máximo
+            maxAge: 60 * 60 * 1000 // ms
+        });
+
+        res.cookie('jwtRefreshToken', refreshToken, {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'strict',
+            maxAge: 60 * 60 * 24 * 1000
+        });
+
         res.json({
             "token": token,
             "refreshToken": refreshToken,
@@ -96,6 +115,12 @@ app.post('/login', (req, res) => {
             success: false
         });
     }
+});
+
+app.get('/cookies', (req, res) => {
+    console.log('> Cookies ------------------------------');
+    // Cookies expiradas no llegan
+    res.json(req.cookies.jwtToken);
 });
 
 app.post('/refresh', (req, res) => {
